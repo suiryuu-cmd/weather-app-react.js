@@ -5,7 +5,7 @@ export type Place = {
   longitude: number
 }
 
-export type Kind = 'clear' | 'cloudy' | 'fog' | 'rain' | 'snow' | 'storm'
+type Kind = 'clear' | 'cloudy' | 'fog' | 'rain' | 'snow' | 'storm'
 
 export type Current = {
   temperature: number
@@ -51,7 +51,9 @@ const WMO: Record<number, [string, Kind]> = {
 }
 
 async function getJson(url: string) {
-  const res = await fetch(url)
+  const res = await fetch(url).catch(() => {
+    throw new Error("Couldn't reach the weather service. Check your connection and try again.")
+  })
   if (!res.ok) throw new Error(`Weather service returned ${res.status}. Try again in a moment.`)
   return res.json()
 }

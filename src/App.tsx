@@ -28,12 +28,6 @@ function save(key: string, places: Place[]) {
 const samePlace = (a: Place, b: Place) =>
   a.latitude.toFixed(2) === b.latitude.toFixed(2) && a.longitude.toFixed(2) === b.longitude.toFixed(2)
 
-function errorText(error: unknown) {
-  return error instanceof Error && error.message.startsWith('Weather service')
-    ? error.message
-    : "Couldn't reach the weather service. Check your connection and try again."
-}
-
 // Open-Meteo returns the place's local wall-clock time without an offset, so parsing it
 // as browser-local time and formatting it back keeps the place's clock reading.
 const timeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
@@ -84,7 +78,7 @@ export default function App() {
         save('recent', list)
       }
     } catch (error) {
-      if (id === latest.current) setNotice({ text: errorText(error), retry: () => show(next) })
+      if (id === latest.current) setNotice({ text: (error as Error).message, retry: () => show(next) })
     } finally {
       if (id === latest.current) setLoading(false)
     }
@@ -98,7 +92,7 @@ export default function App() {
       setResults(found)
       if (!found.length) setNotice({ text: `No places found for “${name}”. Check the spelling or try a larger city nearby.` })
     } catch (error) {
-      if (id === latest.current) setNotice({ text: errorText(error), retry: () => find(name) })
+      if (id === latest.current) setNotice({ text: (error as Error).message, retry: () => find(name) })
     } finally {
       if (id === latest.current) setLoading(false)
     }
@@ -271,14 +265,9 @@ export default function App() {
               <div className="h-7 w-36 rounded-full bg-surface" />
             </div>
           ) : (
-            <div>
-              <h1 className="text-5xl leading-[1.05] font-extralight tracking-[-0.03em] text-balance sm:text-7xl">
-                Check the Sky Anywhere
-              </h1>
-              <p className="mt-3 max-w-md text-lg text-ink-soft">
-                Search for a city or use your location to see the weather right now.
-              </p>
-            </div>
+            <h1 className="text-5xl leading-[1.05] font-extralight tracking-[-0.03em] text-balance sm:text-7xl">
+              Check the Sky Anywhere
+            </h1>
           )}
         </section>
 

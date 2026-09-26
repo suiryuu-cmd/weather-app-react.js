@@ -42,14 +42,15 @@
   }
 }
 
-/* Two ink families. Every sky below keeps its stops inside the luminance band
-   its ink needs for WCAG AA, soft ink included. */
+/* Two ink families, picked by each sky's color-scheme: deep ink on pale skies,
+   light ink on dark ones. Every sky below keeps its stops inside the luminance
+   band its ink needs for WCAG AA, soft ink included. */
 .sky {
-  --ink: #0b1a2b;
-  --ink-soft: #2e3f52;
-  --surface: rgb(255 255 255 / 0.45);
-  --surface-hover: rgb(255 255 255 / 0.7);
-  --line: rgb(11 26 43 / 0.16);
+  --ink: light-dark(#0b1a2b, #f1f5fa);
+  --ink-soft: light-dark(#2e3f52, #cad6e3);
+  --surface: light-dark(rgb(255 255 255 / 0.45), rgb(255 255 255 / 0.08));
+  --surface-hover: light-dark(rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.16));
+  --line: light-dark(rgb(11 26 43 / 0.16), rgb(255 255 255 / 0.18));
   color-scheme: light;
   color: var(--ink);
   caret-color: var(--ink);
@@ -64,11 +65,6 @@
 .sky[data-sky$="-night"],
 .sky[data-sky="rain-day"],
 .sky[data-sky="storm-day"] {
-  --ink: #f1f5fa;
-  --ink-soft: #cad6e3;
-  --surface: rgb(255 255 255 / 0.08);
-  --surface-hover: rgb(255 255 255 / 0.16);
-  --line: rgb(255 255 255 / 0.18);
   color-scheme: dark;
 }
 
@@ -87,14 +83,9 @@
 .sky[data-sky="storm-night"] { --sky-top: #0b0d12; --sky-mid: #1a1d26; --sky-bottom: #2a2e3a; }
 
 /* Dark scheme: daytime skies dim to dusk (still lighter and warmer than their night
-   twins), and every sky takes the light ink. */
+   twins), and every sky switches to the light ink. */
 @media (prefers-color-scheme: dark) {
-  .sky[data-sky] {
-    --ink: #f1f5fa;
-    --ink-soft: #cad6e3;
-    --surface: rgb(255 255 255 / 0.08);
-    --surface-hover: rgb(255 255 255 / 0.16);
-    --line: rgb(255 255 255 / 0.18);
+  .sky {
     color-scheme: dark;
   }
 
