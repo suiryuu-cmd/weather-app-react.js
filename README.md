@@ -22,3 +22,4 @@ pnpm dev
 ```
 
 Other scripts: `pnpm test` (Vitest), `pnpm lint`, `pnpm build`, `pnpm preview`.
+# weather-app-react.js
