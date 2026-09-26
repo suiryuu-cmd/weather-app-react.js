@@ -1,31 +1,20 @@
-import {
-  CloudFogIcon,
-  CloudLightningIcon,
-  CloudMoonIcon,
-  CloudRainIcon,
-  CloudSnowIcon,
-  CloudSunIcon,
-  MoonIcon,
-  SunIcon,
-  type Icon,
-} from '@phosphor-icons/react'
+import { Icon, type IconName } from './icons'
 import { clockFormat, temperature, wallClock, type Day, type Hour, type Kind, type Unit } from './weather'
 
-const ICONS: Record<Kind, [day: Icon, night: Icon]> = {
-  clear: [SunIcon, MoonIcon],
-  cloudy: [CloudSunIcon, CloudMoonIcon],
-  fog: [CloudFogIcon, CloudFogIcon],
-  rain: [CloudRainIcon, CloudRainIcon],
-  snow: [CloudSnowIcon, CloudSnowIcon],
-  storm: [CloudLightningIcon, CloudLightningIcon],
+const ICONS: Record<Kind, [day: IconName, night: IconName]> = {
+  clear: ['sun', 'moon'],
+  cloudy: ['cloudSun', 'cloudMoon'],
+  fog: ['fog', 'fog'],
+  rain: ['rain', 'rain'],
+  snow: ['snow', 'snow'],
+  storm: ['storm', 'storm'],
 }
 
 const hourFormat = clockFormat({ hour: 'numeric' })
 const dayFormat = clockFormat({ weekday: 'short' })
 
 function KindIcon({ kind, isDay = true }: { kind: Kind; isDay?: boolean }) {
-  const Glyph = ICONS[kind][isDay ? 0 : 1]
-  return <Glyph aria-hidden size={24} className="shrink-0" />
+  return <Icon name={ICONS[kind][isDay ? 0 : 1]} className="shrink-0" />
 }
 
 export function Hourly({ hours, unit }: { hours: Hour[]; unit: Unit }) {

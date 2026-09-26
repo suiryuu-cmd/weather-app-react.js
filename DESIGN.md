@@ -262,7 +262,7 @@ Outside `main` so it is the page's contentinfo landmark: Open-Meteo attribution,
 ### Do:
 - **Do** express any new state through `data-sky` and the existing variables, never per-component colors.
 - **Do** keep controls as pills on the single translucent surface.
-- **Do** use Phosphor icons at regular weight, 20-22px, only where they label an action (search, location, save).
+- **Do** use Phosphor icons at regular weight (paths copied into `src/icons.tsx`, one `<Icon name>` component), 20-24px, for actions (search, location, save) and forecast conditions; nowhere as decoration.
 - **Do** keep the ink flip discrete and delayed (0.15s, near the visual midpoint) inside the 1.2s sky glide.
 
 ### Don't:

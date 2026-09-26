@@ -1,6 +1,6 @@
-import { MagnifyingGlassIcon, NavigationArrowIcon, StarIcon } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Daily, Hourly } from './Forecast'
+import { Icon } from './icons'
 import {
   clockFormat,
   getWeather,
@@ -67,7 +67,6 @@ const control =
 
 export default function App() {
   const [initial] = useState(loadLast)
-  const [query, setQuery] = useState('')
   const [results, setResults] = useState<Place[]>([])
   const [place, setPlace] = useState<Place | null>(initial?.place ?? null)
   const [weather, setWeather] = useState<Weather | null>(initial?.weather ?? null)
@@ -84,9 +83,9 @@ export default function App() {
   const skyRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
-  // Set when the control that started a request disappears on click (a search result,
-  // "Try Again"), so focus can land somewhere sensible instead of falling to <body>.
-  const refocus = useRef<'heading' | 'input' | null>(null)
+  // Set when the clicked control disappears (a search result, "Try Again"): focus waits on
+  // the search field, then moves to the new place's heading once its weather renders.
+  const refocus = useRef(false)
 
   const now = weather?.current
   // Dawn and dusk only replace clear or cloudy skies; rain at sunset still looks like rain.
@@ -117,17 +116,12 @@ export default function App() {
     return () => clearTimeout(id)
   }, [sky])
 
-  // Runs after the new weather has rendered, so the heading exists to take focus.
+  // Runs after the new weather has rendered, so the heading exists to take focus. Only if
+  // focus is still parked on the search field: never pull it away from where the user went.
   useEffect(() => {
-    if (refocus.current === 'heading') headingRef.current?.focus()
-    refocus.current = null
+    if (refocus.current && document.activeElement === inputRef.current) headingRef.current?.focus()
+    refocus.current = false
   }, [weather])
-
-  // Where focus goes when a request ends without new weather.
-  function recoverFocus() {
-    if (refocus.current) inputRef.current?.focus()
-    refocus.current = null
-  }
 
   function start(showLoading = true) {
     if (showLoading) setLoading(true)
@@ -143,7 +137,6 @@ export default function App() {
       if (id !== latest.current) return
       setPlace(next)
       setWeather(data)
-      if (refocus.current) refocus.current = 'heading'
       if (!quiet) setStatus(`${next.name}: ${temperature(data.current.temperature, unit)}°, ${data.current.label}`)
       write('last', { place: next, weather: data })
       if (next.name !== HERE) {
@@ -152,10 +145,7 @@ export default function App() {
         write('recent', list)
       }
     } catch (error) {
-      if (id === latest.current) {
-        setNotice({ text: (error as Error).message, retry: () => show(next) })
-        recoverFocus()
-      }
+      if (id === latest.current) setNotice({ text: (error as Error).message, retry: () => show(next) })
     } finally {
       if (id === latest.current) setLoading(false)
     }
@@ -169,21 +159,19 @@ export default function App() {
       setResults(found)
       if (!found.length) setNotice({ text: `No places found for “${name}”. Check the spelling or try a larger city nearby.` })
       else setStatus(`${found.length} ${found.length === 1 ? 'place' : 'places'} found`)
-      recoverFocus()
     } catch (error) {
       if (id === latest.current) {
         setResults([])
         setNotice({ text: (error as Error).message, retry: () => find(name) })
-        recoverFocus()
       }
     } finally {
       if (id === latest.current) setLoading(false)
     }
   }
 
-  function onSearch(event: FormEvent) {
+  function onSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const name = query.trim()
+    const name = String(new FormData(event.currentTarget).get('city') ?? '').trim()
     if (name) find(name)
   }
 
@@ -196,17 +184,15 @@ export default function App() {
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         if (id !== latest.current) return
-        show({
-          name: HERE,
-          detail: `${coords.latitude.toFixed(2)}, ${coords.longitude.toFixed(2)}`,
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-        })
+        // About 1 km is plenty for weather, and it keeps the exact position out of the
+        // request to Open-Meteo and out of localStorage.
+        const latitude = Math.round(coords.latitude * 100) / 100
+        const longitude = Math.round(coords.longitude * 100) / 100
+        show({ name: HERE, detail: `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`, latitude, longitude })
       },
       (error) => {
         if (id !== latest.current) return
         setLoading(false)
-        recoverFocus()
         setNotice(
           error.code === error.PERMISSION_DENIED
             ? { text: 'Location access is blocked. Allow it in your browser settings, or search for a city.' }
@@ -240,7 +226,7 @@ export default function App() {
   // (not <body>) while the request runs, then move it to the result when it arrives.
   function fromVanishingControl(action: () => void) {
     inputRef.current?.focus()
-    refocus.current = 'input'
+    refocus.current = true
     action()
   }
 
@@ -258,8 +244,8 @@ export default function App() {
             </label>
             <div className="flex gap-2">
               <div className="relative min-w-0 flex-1">
-                <MagnifyingGlassIcon
-                  aria-hidden
+                <Icon
+                  name="search"
                   size={20}
                   className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-ink-soft"
                 />
@@ -268,8 +254,7 @@ export default function App() {
                   id="city"
                   name="city"
                   type="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  maxLength={100}
                   placeholder="Jakarta, Tokyo, Reykjavík…"
                   autoComplete="off"
                   spellCheck={false}
@@ -283,7 +268,7 @@ export default function App() {
                 aria-label="Use My Location"
                 className={`${control} flex h-12 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-medium`}
               >
-                <NavigationArrowIcon aria-hidden size={20} />
+                <Icon name="location" size={20} />
                 <span aria-hidden className="hidden sm:inline">
                   Use My Location
                 </span>
@@ -366,7 +351,7 @@ export default function App() {
                       aria-label={`Save ${place.name}`}
                       className="grid size-11 shrink-0 place-items-center rounded-full transition duration-150 hover:bg-surface active:scale-95 motion-reduce:active:scale-100"
                     >
-                      <StarIcon aria-hidden size={22} weight={isSaved ? 'fill' : 'regular'} />
+                      <Icon name={isSaved ? 'starFilled' : 'star'} size={22} />
                     </button>
                   )}
                 </div>
