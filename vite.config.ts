@@ -19,7 +19,19 @@ const contentSecurityPolicy: Plugin = {
   transformIndexHtml: () => [{ tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: csp }, injectTo: 'head-prepend' }],
 }
 
+// The Latin font is otherwise found only after the CSS has downloaded and parsed.
+// Its file name carries a build hash, so the link is added once the bundle exists.
+const preloadFont: Plugin = {
+  name: 'preload-latin-font',
+  apply: 'build',
+  transformIndexHtml(_, { bundle }) {
+    const font = Object.keys(bundle ?? {}).find((file) => /geist-latin-wght-normal-.*\.woff2$/.test(file))
+    if (!font) return []
+    return [{ tag: 'link', attrs: { rel: 'preload', as: 'font', type: 'font/woff2', href: `/${font}`, crossorigin: '' }, injectTo: 'head' }]
+  },
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), contentSecurityPolicy],
+  plugins: [react(), tailwindcss(), contentSecurityPolicy, preloadFont],
 })
