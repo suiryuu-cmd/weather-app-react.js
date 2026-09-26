@@ -18,6 +18,16 @@ colors:
   clear-day-top: "#5ab4ef"
   clear-day-mid: "#a6d8f7"
   clear-day-bottom: "#fbe3b6"
+  clear-day-glow: "#fff3d6"
+  dawn-top: "#8fb0d9"
+  dawn-mid: "#e2c6d3"
+  dawn-bottom: "#ffd6b3"
+  dawn-glow: "#ffe6c9"
+  dusk-top: "#1c2147"
+  dusk-mid: "#3a2a52"
+  dusk-bottom: "#603642"
+  dusk-glow: "#6e3c33"
+  clear-night-glow: "#394c86"
   cloudy-day-top: "#a9adb2"
   cloudy-day-mid: "#c4c7ca"
   cloudy-day-bottom: "#dcdddf"
@@ -236,7 +246,13 @@ Interactive controls (input, buttons, chips, icon buttons) are full pills. The r
 - **Skeleton**: surface blocks (pill and 1.5rem) pulsing; static under reduced motion.
 
 ### Sky crossfade (signature)
-Sky stops are registered `@property` colors and glide over 1.2s `cubic-bezier(0.16, 1, 0.3, 1)`. Ink, surface and line do not fade: they flip in one step at 0.4s so text never sits mid-contrast. Instant under `prefers-reduced-motion`. The stale view dims to 60% while loading.
+Sky stops are registered `@property` colors and glide over 1.2s `cubic-bezier(0.16, 1, 0.3, 1)`. Ink, surface and line do not fade: they flip in one step at 0.15s, when the ease-out sky is about 58% of the way, so text never sits mid-contrast. Instant under `prefers-reduced-motion`. The stale view dims to 60% while loading.
+
+### Sky layer and weather texture
+The gradient lives on one fixed, viewport-sized layer (`.sky-fx`, behind the page) so the sky always reads like looking up while the forecast scrolls over it. A radial glow (`--sky-glow`) sits on the horizon for clear day, dawn, dusk and clear night. One pseudo-element carries the texture: tiled stars that fade toward the horizon on clear nights, falling rain streaks (faster for storms), drifting snowflakes in the current ink, and two slow haze bands for fog. Textures move by `transform` only and stop under reduced motion. Dawn and dusk replace clear or cloudy skies within 40 minutes of sunrise or sunset; other conditions keep their own sky.
+
+### Forecast
+Below the fold: "Next 24 Hours" as a horizontal, snap-scrolling, keyboard-focusable strip (hour, Phosphor condition icon, temperature; the current hour sits on a surface pill), then "Next 7 Days" as rows of weekday, icon, condition in soft ink, and high and low. Icons are Phosphor regular, one per condition with day and night variants for clear and cloudy. A °C/°F segmented pill sits beside the location button; the pressed option fills with ink.
 
 ## Do's and Don'ts
 
@@ -244,7 +260,7 @@ Sky stops are registered `@property` colors and glide over 1.2s `cubic-bezier(0.
 - **Do** express any new state through `data-sky` and the existing variables, never per-component colors.
 - **Do** keep controls as pills on the single translucent surface.
 - **Do** use Phosphor icons at regular weight, 20-22px, only where they label an action (search, location, save).
-- **Do** keep the ink flip discrete and delayed (0.4s) inside the 1.2s sky glide.
+- **Do** keep the ink flip discrete and delayed (0.15s, near the visual midpoint) inside the 1.2s sky glide.
 
 ### Don't:
 - **Don't** add cards, tiles, shadows, or glass stacks on top of the sky.

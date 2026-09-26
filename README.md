@@ -8,7 +8,10 @@ Built with React, TypeScript, Vite, and Tailwind CSS. Weather and city search co
 
 - Search for a city, or use your current location
 - Temperature, feels like, humidity, and wind right now
-- Saved and recent places, kept in your browser
+- The next 24 hours and the next 7 days
+- °C or °F, remembered in your browser
+- Saved and recent places, kept in your browser; your last place opens instantly
+- Skies for dawn and dusk, stars on clear nights, falling rain and snow, drifting fog
 - Follows your system light or dark theme, respects reduced motion
 
 ## Run it

@@ -14,6 +14,7 @@
 @property --sky-top { syntax: "<color>"; inherits: true; initial-value: #aab9e0; }
 @property --sky-mid { syntax: "<color>"; inherits: true; initial-value: #cad3ee; }
 @property --sky-bottom { syntax: "<color>"; inherits: true; initial-value: #e9ecf7; }
+@property --sky-glow { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --ink { syntax: "<color>"; inherits: true; initial-value: #0b1a2b; }
 @property --ink-soft { syntax: "<color>"; inherits: true; initial-value: #2e3f52; }
 @property --surface { syntax: "<color>"; inherits: true; initial-value: transparent; }
@@ -43,8 +44,8 @@
 }
 
 /* Two ink families, picked by each sky's color-scheme: deep ink on pale skies,
-   light ink on dark ones. Every sky below keeps its stops inside the luminance
-   band its ink needs for WCAG AA, soft ink included. */
+   light ink on dark ones. Every sky below keeps its stops (glow included) inside
+   the luminance band its ink needs for WCAG AA, soft ink included. */
 .sky {
   --ink: light-dark(#0b1a2b, #f1f5fa);
   --ink-soft: light-dark(#2e3f52, #cad6e3);
@@ -54,30 +55,33 @@
   color-scheme: light;
   color: var(--ink);
   caret-color: var(--ink);
-  background: linear-gradient(to bottom, var(--sky-top), var(--sky-mid) 55%, var(--sky-bottom));
-  /* The sky glides; the ink flips once, midway, so text never fades into the sky. */
-  transition-property: --sky-top, --sky-mid, --sky-bottom, --ink, --ink-soft, --surface, --surface-hover, --line;
-  transition-duration: 1.2s, 1.2s, 1.2s, 0s, 0s, 0s, 0s, 0s;
-  transition-delay: 0s, 0s, 0s, 0.4s, 0.4s, 0.4s, 0.4s, 0.4s;
+  /* The sky glides; the ink flips once, when the ease-out curve is about halfway
+     (0.15s of 1.2s), so text never fades into the sky. */
+  transition-property: --sky-top, --sky-mid, --sky-bottom, --sky-glow, --ink, --ink-soft, --surface, --surface-hover, --line;
+  transition-duration: 1.2s, 1.2s, 1.2s, 1.2s, 0s, 0s, 0s, 0s, 0s;
+  transition-delay: 0s, 0s, 0s, 0s, 0.15s, 0.15s, 0.15s, 0.15s, 0.15s;
   transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sky[data-sky$="-night"],
 .sky[data-sky="rain-day"],
-.sky[data-sky="storm-day"] {
+.sky[data-sky="storm-day"],
+.sky[data-sky="dusk"] {
   color-scheme: dark;
 }
 
 .sky[data-sky="idle"] { --sky-top: #aab9e0; --sky-mid: #cad3ee; --sky-bottom: #e9ecf7; }
-.sky[data-sky="clear-day"] { --sky-top: #5ab4ef; --sky-mid: #a6d8f7; --sky-bottom: #fbe3b6; }
+.sky[data-sky="clear-day"] { --sky-top: #5ab4ef; --sky-mid: #a6d8f7; --sky-bottom: #fbe3b6; --sky-glow: #fff3d6; }
 .sky[data-sky="cloudy-day"] { --sky-top: #a9adb2; --sky-mid: #c4c7ca; --sky-bottom: #dcdddf; }
 .sky[data-sky="fog-day"] { --sky-top: #c9c5bd; --sky-mid: #d3cfc8; --sky-bottom: #dcd8d1; }
 .sky[data-sky="rain-day"] { --sky-top: #34495d; --sky-mid: #3b4f62; --sky-bottom: #3b4d5e; }
 .sky[data-sky="snow-day"] { --sky-top: #cfdced; --sky-mid: #e6eef7; --sky-bottom: #fbfdff; }
 .sky[data-sky="storm-day"] { --sky-top: #2a2f3a; --sky-mid: #353a47; --sky-bottom: #3d4250; }
-.sky[data-sky="clear-night"] { --sky-top: #0b1330; --sky-mid: #1b2a55; --sky-bottom: #34467a; }
+.sky[data-sky="dawn"] { --sky-top: #8fb0d9; --sky-mid: #e2c6d3; --sky-bottom: #ffd6b3; --sky-glow: #ffe6c9; }
+.sky[data-sky="dusk"] { --sky-top: #1c2147; --sky-mid: #3a2a52; --sky-bottom: #603642; --sky-glow: #6e3c33; }
+.sky[data-sky="clear-night"] { --sky-top: #0b1330; --sky-mid: #1b2a55; --sky-bottom: #34467a; --sky-glow: #394c86; }
 .sky[data-sky="cloudy-night"] { --sky-top: #15191f; --sky-mid: #262c35; --sky-bottom: #3a414c; }
-.sky[data-sky="fog-night"] { --sky-top: #1e2126; --sky-mid: #33373d; --sky-bottom: #4a4e54; }
+.sky[data-sky="fog-night"] { --sky-top: #1e2126; --sky-mid: #33373d; --sky-bottom: #42464b; }
 .sky[data-sky="rain-night"] { --sky-top: #0f1a24; --sky-mid: #1d2c3a; --sky-bottom: #2e4152; }
 .sky[data-sky="snow-night"] { --sky-top: #1a2233; --sky-mid: #2c3850; --sky-bottom: #3d4a63; }
 .sky[data-sky="storm-night"] { --sky-top: #0b0d12; --sky-mid: #1a1d26; --sky-bottom: #2a2e3a; }
@@ -90,16 +94,90 @@
   }
 
   .sky[data-sky="idle"] { --sky-top: #0e1729; --sky-mid: #18253d; --sky-bottom: #243553; }
-  .sky[data-sky="clear-day"] { --sky-top: #1b4d86; --sky-mid: #274f7a; --sky-bottom: #574842; }
+  .sky[data-sky="clear-day"] { --sky-top: #1b4d86; --sky-mid: #274f7a; --sky-bottom: #574842; --sky-glow: transparent; }
   .sky[data-sky="cloudy-day"] { --sky-top: #3a4452; --sky-mid: #434d59; --sky-bottom: #454d57; }
-  .sky[data-sky="fog-day"] { --sky-top: #4a4b4c; --sky-mid: #4d4d4d; --sky-bottom: #4d4d4c; }
+  .sky[data-sky="fog-day"] { --sky-top: #444546; --sky-mid: #454545; --sky-bottom: #454544; }
   .sky[data-sky="rain-day"] { --sky-top: #243746; --sky-mid: #2e4454; --sky-bottom: #36505f; }
   .sky[data-sky="snow-day"] { --sky-top: #3a4e62; --sky-mid: #3b4d64; --sky-bottom: #3c4d61; }
   .sky[data-sky="storm-day"] { --sky-top: #262b33; --sky-mid: #333a45; --sky-bottom: #3b4350; }
+  .sky[data-sky="dawn"] { --sky-top: #1f2a4a; --sky-mid: #3a3453; --sky-bottom: #57414b; --sky-glow: transparent; }
+}
+
+/* The sky itself: fixed to the viewport so it always reads like looking up, whatever
+   the scroll position. A glow sits on the horizon for the lit skies. */
+.sky-fx {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(130% 55% at 50% 100%, var(--sky-glow), transparent 70%),
+    linear-gradient(to bottom, var(--sky-top), var(--sky-mid) 55%, var(--sky-bottom));
+}
+
+/* Weather texture on one extra layer: stars, rain, snow, or drifting fog. */
+.sky-fx::before {
+  --tile: 120px;
+  content: "";
+  position: absolute;
+  /* One tile taller than the screen, so moving down by one tile loops seamlessly. */
+  inset: calc(-1 * var(--tile)) 0 0;
+}
+
+.sky[data-sky="clear-night"] .sky-fx::before {
+  inset: 0 0 35%;
+  background-image:
+    radial-gradient(1px 1px at 23px 41px, #fff 50%, transparent),
+    radial-gradient(1px 1px at 97px 13px, rgb(255 255 255 / 0.7) 50%, transparent),
+    radial-gradient(1.5px 1.5px at 151px 88px, #fff 50%, transparent),
+    radial-gradient(1px 1px at 61px 132px, rgb(255 255 255 / 0.6) 50%, transparent);
+  background-size: 173px 149px, 211px 167px, 257px 199px, 139px 181px;
+  mask-image: linear-gradient(black, transparent);
+}
+
+.sky[data-sky^="rain-"] .sky-fx::before,
+.sky[data-sky^="storm-"] .sky-fx::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' stroke='white' stroke-opacity='.28' stroke-linecap='round'%3E%3Cpath d='M10 8l-3 16M46 40l-3 16M82 4l-3 16M30 76l-3 16M66 92l-3 16M104 58l-3 16M112 100l-3 16'/%3E%3C/svg%3E");
+  animation: fall 0.6s linear infinite;
+}
+
+.sky[data-sky^="storm-"] .sky-fx::before {
+  animation-duration: 0.4s;
+}
+
+.sky[data-sky^="snow-"] .sky-fx::before {
+  --tile: 160px;
+  --flake: light-dark(rgb(11 26 43 / 0.2), rgb(255 255 255 / 0.55));
+  background-image:
+    radial-gradient(2px 2px at 20px 30px, var(--flake) 50%, transparent),
+    radial-gradient(1.5px 1.5px at 90px 110px, var(--flake) 50%, transparent),
+    radial-gradient(2.5px 2.5px at 130px 60px, var(--flake) 50%, transparent);
+  background-size: var(--tile) var(--tile);
+  animation: fall 9s linear infinite;
+}
+
+.sky[data-sky^="fog-"] .sky-fx::before {
+  --haze: light-dark(rgb(255 255 255 / 0.35), rgb(255 255 255 / 0.04));
+  inset: 0 -50% 0 0;
+  background:
+    radial-gradient(40% 18% at 25% 62%, var(--haze), transparent),
+    radial-gradient(35% 14% at 70% 40%, var(--haze), transparent);
+  animation: drift 45s ease-in-out infinite alternate;
+}
+
+@keyframes fall {
+  to { transform: translateY(var(--tile)); }
+}
+
+@keyframes drift {
+  to { transform: translateX(-33%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sky {
+  .sky,
+  .sky-fx::before {
     transition: none;
+    animation: none;
   }
 }

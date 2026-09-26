@@ -1,6 +1,7 @@
 import { MagnifyingGlassIcon, NavigationArrowIcon, StarIcon } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { getCurrent, searchCities, type Current, type Place } from './weather'
+import { Daily, Hourly } from './Forecast'
+import { getWeather, searchCities, temperature, windSpeed, type Place, type Unit, type Weather } from './weather'
 
 // ponytail: Open-Meteo has no reverse geocoding, so a geolocated place gets this
 // fixed name. Use a reverse-geocoding service if the city name matters.
@@ -8,21 +9,43 @@ const HERE = 'My location'
 
 type Notice = { text: string; retry?: () => void }
 
-function load(key: string): Place[] {
+// localStorage is user-editable, so everything read back is checked before use.
+function read(key: string): unknown {
   try {
-    const value = JSON.parse(localStorage.getItem(key) ?? '[]')
-    return Array.isArray(value) ? value : []
+    return JSON.parse(localStorage.getItem(key) ?? 'null')
   } catch {
-    return []
+    return null
   }
 }
 
-function save(key: string, places: Place[]) {
+function write(key: string, value: unknown) {
   try {
-    localStorage.setItem(key, JSON.stringify(places))
+    localStorage.setItem(key, JSON.stringify(value))
   } catch {
     // Storage blocked (private mode, quota): the app still works, it just forgets.
   }
+}
+
+const isPlace = (p: unknown): p is Place =>
+  typeof p === 'object' &&
+  p !== null &&
+  typeof (p as Place).name === 'string' &&
+  typeof (p as Place).detail === 'string' &&
+  Number.isFinite((p as Place).latitude) &&
+  Number.isFinite((p as Place).longitude)
+
+function loadPlaces(key: string): Place[] {
+  const value = read(key)
+  return Array.isArray(value) ? value.filter(isPlace) : []
+}
+
+// The last weather shown, so a returning visitor sees a sky at once while it refreshes.
+function loadLast(): { place: Place; weather: Weather } | null {
+  const value = read('last') as { place?: unknown; weather?: Partial<Weather> } | null
+  const weather = value?.weather
+  return value && isPlace(value.place) && weather?.current && Array.isArray(weather.hours) && Array.isArray(weather.days)
+    ? { place: value.place, weather: weather as Weather }
+    : null
 }
 
 const samePlace = (a: Place, b: Place) =>
@@ -36,46 +59,68 @@ const control =
   'border border-line bg-surface transition duration-150 hover:bg-surface-hover active:scale-[0.98] motion-reduce:active:scale-100'
 
 export default function App() {
+  const [initial] = useState(loadLast)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Place[]>([])
-  const [place, setPlace] = useState<Place | null>(null)
-  const [weather, setWeather] = useState<Current | null>(null)
+  const [place, setPlace] = useState<Place | null>(initial?.place ?? null)
+  const [weather, setWeather] = useState<Weather | null>(initial?.weather ?? null)
   const [notice, setNotice] = useState<Notice | null>(null)
-  const [saved, setSaved] = useState(() => load('saved'))
-  const [recent, setRecent] = useState(() => load('recent'))
-  const [loading, setLoading] = useState(() => recent.length > 0 || saved.length > 0)
+  const [saved, setSaved] = useState(() => loadPlaces('saved'))
+  const [recent, setRecent] = useState(() => loadPlaces('recent'))
+  const [unit, setUnit] = useState<Unit>(() => (read('unit') === 'F' ? 'F' : 'C'))
+  const [loading, setLoading] = useState(() => !initial && (recent.length > 0 || saved.length > 0))
   // Each request takes a number; a response that is no longer the latest is dropped.
   const latest = useRef(0)
+  const skyRef = useRef<HTMLDivElement>(null)
 
-  // Returning visitors land on their last place instead of an empty sky.
+  const now = weather?.current
+  // Dawn and dusk only replace clear or cloudy skies; rain at sunset still looks like rain.
+  const sky = !now
+    ? 'idle'
+    : now.twilight && (now.kind === 'clear' || now.kind === 'cloudy')
+      ? now.twilight
+      : `${now.kind}-${now.isDay ? 'day' : 'night'}`
+
+  // Returning visitors land on their last place: shown from cache, then refreshed quietly.
   useEffect(() => {
-    const last = recent[0] ?? saved[0]
-    if (last) show(last)
+    const last = initial?.place ?? recent[0] ?? saved[0]
+    if (last) show(last, Boolean(initial))
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
   }, [])
 
   useEffect(() => {
-    document.title = place && weather ? `${Math.round(weather.temperature)}° ${place.name} | Weather` : 'Weather'
-  }, [place, weather])
+    document.title = place && now ? `${temperature(now.temperature, unit)}° ${place.name} | Weather` : 'Weather'
+  }, [place, now, unit])
 
-  function start() {
-    setLoading(true)
+  // Match the browser's toolbar to the sky once its colour transition has settled.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      if (!skyRef.current) return
+      const top = getComputedStyle(skyRef.current).getPropertyValue('--sky-top')
+      document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => meta.setAttribute('content', top))
+    }, 1300)
+    return () => clearTimeout(id)
+  }, [sky])
+
+  function start(showLoading = true) {
+    if (showLoading) setLoading(true)
     setNotice(null)
     return ++latest.current
   }
 
-  async function show(next: Place) {
-    const id = start()
+  async function show(next: Place, quiet = false) {
+    const id = start(!quiet)
     setResults([])
     try {
-      const current = await getCurrent(next)
+      const data = await getWeather(next)
       if (id !== latest.current) return
       setPlace(next)
-      setWeather(current)
+      setWeather(data)
+      write('last', { place: next, weather: data })
       if (next.name !== HERE) {
         const list = [next, ...recent.filter((p) => !samePlace(p, next))].slice(0, 5)
         setRecent(list)
-        save('recent', list)
+        write('recent', list)
       }
     } catch (error) {
       if (id === latest.current) setNotice({ text: (error as Error).message, retry: () => show(next) })
@@ -139,14 +184,19 @@ export default function App() {
     if (!place) return
     const list = isSaved ? saved.filter((p) => !samePlace(p, place)) : [...saved, place]
     setSaved(list)
-    save('saved', list)
+    write('saved', list)
   }
 
-  const sky = weather ? `${weather.kind}-${weather.isDay ? 'day' : 'night'}` : 'idle'
+  function changeUnit(next: Unit) {
+    setUnit(next)
+    write('unit', next)
+  }
+
   const unsavedRecent = recent.filter((p) => !saved.some((s) => samePlace(s, p)))
 
   return (
-    <div className="sky min-h-dvh" data-sky={sky}>
+    <div ref={skyRef} className="sky min-h-dvh" data-sky={sky}>
+      <div aria-hidden className="sky-fx" />
       <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-8 px-4 pt-6 pb-6 sm:px-8 sm:pt-8">
         <header className="flex flex-col gap-3">
           <form role="search" onSubmit={onSearch} className="flex flex-col gap-2">
@@ -184,6 +234,19 @@ export default function App() {
                   Use My Location
                 </span>
               </button>
+              <div role="group" aria-label="Temperature unit" className="flex h-12 shrink-0 rounded-full border border-line bg-surface p-px">
+                {(['C', 'F'] as const).map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    onClick={() => changeUnit(u)}
+                    aria-pressed={unit === u}
+                    className="w-11 rounded-full text-sm font-medium transition-colors duration-150 hover:bg-surface-hover aria-pressed:bg-ink aria-pressed:text-[var(--sky-mid)]"
+                  >
+                    °{u}
+                  </button>
+                ))}
+              </div>
             </div>
           </form>
 
@@ -221,13 +284,15 @@ export default function App() {
         <section
           aria-label="Current weather"
           aria-busy={loading}
-          className={`flex flex-1 flex-col justify-center gap-8 transition-opacity duration-300 ${loading && weather ? 'opacity-60' : ''}`}
+          className={`flex flex-1 flex-col justify-center gap-8 transition-opacity duration-300 ${loading && now ? 'opacity-60' : ''}`}
         >
-          {place && weather ? (
+          {place && now ? (
             <>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="min-w-0 text-2xl font-medium tracking-tight text-balance break-words sm:text-3xl">{place.name}</h1>
+                  <h1 className="min-w-0 text-2xl font-medium tracking-tight text-balance break-words sm:text-3xl">
+                    {place.name}
+                  </h1>
                   {place.name !== HERE && (
                     <button
                       type="button"
@@ -245,16 +310,16 @@ export default function App() {
 
               <div>
                 <p className="text-[clamp(5.5rem,24vw,9rem)] leading-[0.9] font-extralight tracking-[-0.04em] tabular-nums">
-                  {Math.round(weather.temperature)}°
+                  {temperature(now.temperature, unit)}°
                 </p>
-                <p className="mt-3 text-2xl sm:text-3xl">{weather.label}</p>
-                <p className="mt-1 text-sm text-ink-soft">Updated {timeFormat.format(new Date(weather.time))} local time</p>
+                <p className="mt-3 text-2xl sm:text-3xl">{now.label}</p>
+                <p className="mt-1 text-sm text-ink-soft">Updated {timeFormat.format(new Date(now.time))} local time</p>
               </div>
 
               <dl className="grid max-w-xl grid-cols-3 gap-4 border-t border-line pt-5">
-                <Reading label="Feels like" value={Math.round(weather.feelsLike)} unit="°" />
-                <Reading label="Humidity" value={weather.humidity} unit="%" />
-                <Reading label="Wind" value={Math.round(weather.wind)} unit=" km/h" />
+                <Reading label="Feels like" value={temperature(now.feelsLike, unit)} unit="°" />
+                <Reading label="Humidity" value={now.humidity} unit="%" />
+                <Reading label="Wind" value={windSpeed(now.wind, unit)} unit={unit === 'F' ? ' mph' : ' km/h'} />
               </dl>
             </>
           ) : loading ? (
@@ -276,6 +341,13 @@ export default function App() {
             <Places title="Saved" places={saved} current={place} onPick={show} />
             <Places title="Recent" places={unsavedRecent} current={place} onPick={show} />
           </nav>
+        )}
+
+        {weather && (
+          <div className="flex flex-col gap-10 pt-4">
+            <Hourly hours={weather.hours} unit={unit} />
+            <Daily days={weather.days} unit={unit} />
+          </div>
         )}
 
         <footer className="text-xs text-ink-soft">

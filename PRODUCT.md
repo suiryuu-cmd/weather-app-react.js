@@ -17,9 +17,8 @@ Suasana tampilan ikut cuaca: kondisi (cerah, berawan, kabut, hujan, salju, badai
 
 ## Capabilities and Constraints
 - Data: Open-Meteo (forecast + geocoding), tanpa API key, tanpa backend.
-- v1: cari kota, cuaca sekarang (suhu, terasa seperti, kelembapan, angin, kondisi), lokasi saya via geolocation, favorit dan terakhir dicari di localStorage.
-- Satuan metrik (°C, km/h). UI bahasa Inggris.
-- Belum masuk v1: prakiraan per jam/harian, toggle °C/°F.
+- Fitur: cari kota, cuaca sekarang (suhu, terasa seperti, kelembapan, angin, kondisi), lokasi saya via geolocation, favorit dan terakhir dicari di localStorage, prakiraan 24 jam dan 7 hari, toggle °C/°F, cuaca terakhir di-cache supaya langsung tampil saat dibuka.
+- Satuan metrik (°C, km/h) atau imperial (°F, mph) sesuai pilihan pengguna. UI bahasa Inggris.
 - Open-Meteo tidak punya reverse geocoding, jadi lokasi dari geolocation diberi label "My location".
 - Deploy belum ditentukan; git hanya lokal untuk sekarang.
 
