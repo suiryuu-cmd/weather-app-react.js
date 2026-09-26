@@ -1,0 +1,114 @@
+@import "@fontsource-variable/geist";
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-line: var(--line);
+}
+
+/* Registered so the sky can transition between gradients. */
+@property --sky-top { syntax: "<color>"; inherits: true; initial-value: #aab9e0; }
+@property --sky-mid { syntax: "<color>"; inherits: true; initial-value: #cad3ee; }
+@property --sky-bottom { syntax: "<color>"; inherits: true; initial-value: #e9ecf7; }
+@property --ink { syntax: "<color>"; inherits: true; initial-value: #0b1a2b; }
+@property --ink-soft { syntax: "<color>"; inherits: true; initial-value: #2e3f52; }
+@property --surface { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --surface-hover { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --line { syntax: "<color>"; inherits: true; initial-value: transparent; }
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--ink);
+    color: var(--sky-mid);
+  }
+}
+
+/* Two ink families. Every sky below keeps its stops inside the luminance band
+   its ink needs for WCAG AA, soft ink included. */
+.sky {
+  --ink: #0b1a2b;
+  --ink-soft: #2e3f52;
+  --surface: rgb(255 255 255 / 0.45);
+  --surface-hover: rgb(255 255 255 / 0.7);
+  --line: rgb(11 26 43 / 0.16);
+  color-scheme: light;
+  color: var(--ink);
+  caret-color: var(--ink);
+  background: linear-gradient(to bottom, var(--sky-top), var(--sky-mid) 55%, var(--sky-bottom));
+  /* The sky glides; the ink flips once, midway, so text never fades into the sky. */
+  transition-property: --sky-top, --sky-mid, --sky-bottom, --ink, --ink-soft, --surface, --surface-hover, --line;
+  transition-duration: 1.2s, 1.2s, 1.2s, 0s, 0s, 0s, 0s, 0s;
+  transition-delay: 0s, 0s, 0s, 0.4s, 0.4s, 0.4s, 0.4s, 0.4s;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sky[data-sky$="-night"],
+.sky[data-sky="rain-day"],
+.sky[data-sky="storm-day"] {
+  --ink: #f1f5fa;
+  --ink-soft: #cad6e3;
+  --surface: rgb(255 255 255 / 0.08);
+  --surface-hover: rgb(255 255 255 / 0.16);
+  --line: rgb(255 255 255 / 0.18);
+  color-scheme: dark;
+}
+
+.sky[data-sky="idle"] { --sky-top: #aab9e0; --sky-mid: #cad3ee; --sky-bottom: #e9ecf7; }
+.sky[data-sky="clear-day"] { --sky-top: #5ab4ef; --sky-mid: #a6d8f7; --sky-bottom: #fbe3b6; }
+.sky[data-sky="cloudy-day"] { --sky-top: #a9adb2; --sky-mid: #c4c7ca; --sky-bottom: #dcdddf; }
+.sky[data-sky="fog-day"] { --sky-top: #c9c5bd; --sky-mid: #d3cfc8; --sky-bottom: #dcd8d1; }
+.sky[data-sky="rain-day"] { --sky-top: #34495d; --sky-mid: #3b4f62; --sky-bottom: #3b4d5e; }
+.sky[data-sky="snow-day"] { --sky-top: #cfdced; --sky-mid: #e6eef7; --sky-bottom: #fbfdff; }
+.sky[data-sky="storm-day"] { --sky-top: #2a2f3a; --sky-mid: #353a47; --sky-bottom: #3d4250; }
+.sky[data-sky="clear-night"] { --sky-top: #0b1330; --sky-mid: #1b2a55; --sky-bottom: #34467a; }
+.sky[data-sky="cloudy-night"] { --sky-top: #15191f; --sky-mid: #262c35; --sky-bottom: #3a414c; }
+.sky[data-sky="fog-night"] { --sky-top: #1e2126; --sky-mid: #33373d; --sky-bottom: #4a4e54; }
+.sky[data-sky="rain-night"] { --sky-top: #0f1a24; --sky-mid: #1d2c3a; --sky-bottom: #2e4152; }
+.sky[data-sky="snow-night"] { --sky-top: #1a2233; --sky-mid: #2c3850; --sky-bottom: #3d4a63; }
+.sky[data-sky="storm-night"] { --sky-top: #0b0d12; --sky-mid: #1a1d26; --sky-bottom: #2a2e3a; }
+
+/* Dark scheme: daytime skies dim to dusk (still lighter and warmer than their night
+   twins), and every sky takes the light ink. */
+@media (prefers-color-scheme: dark) {
+  .sky[data-sky] {
+    --ink: #f1f5fa;
+    --ink-soft: #cad6e3;
+    --surface: rgb(255 255 255 / 0.08);
+    --surface-hover: rgb(255 255 255 / 0.16);
+    --line: rgb(255 255 255 / 0.18);
+    color-scheme: dark;
+  }
+
+  .sky[data-sky="idle"] { --sky-top: #0e1729; --sky-mid: #18253d; --sky-bottom: #243553; }
+  .sky[data-sky="clear-day"] { --sky-top: #1b4d86; --sky-mid: #274f7a; --sky-bottom: #574842; }
+  .sky[data-sky="cloudy-day"] { --sky-top: #3a4452; --sky-mid: #434d59; --sky-bottom: #454d57; }
+  .sky[data-sky="fog-day"] { --sky-top: #4a4b4c; --sky-mid: #4d4d4d; --sky-bottom: #4d4d4c; }
+  .sky[data-sky="rain-day"] { --sky-top: #243746; --sky-mid: #2e4454; --sky-bottom: #36505f; }
+  .sky[data-sky="snow-day"] { --sky-top: #3a4e62; --sky-mid: #3b4d64; --sky-bottom: #3c4d61; }
+  .sky[data-sky="storm-day"] { --sky-top: #262b33; --sky-mid: #333a45; --sky-bottom: #3b4350; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sky {
+    transition: none;
+  }
+}
