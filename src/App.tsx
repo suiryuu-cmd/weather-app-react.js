@@ -236,8 +236,10 @@ export default function App() {
     write('still', !still)
   }
 
-  // Leaving a control that is about to unmount: remember to put focus back afterwards.
+  // The clicked control is about to unmount: park focus on the search field right away
+  // (not <body>) while the request runs, then move it to the result when it arrives.
   function fromVanishingControl(action: () => void) {
+    inputRef.current?.focus()
     refocus.current = 'input'
     action()
   }

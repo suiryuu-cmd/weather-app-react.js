@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Test and tooling output
+coverage/
+*.tsbuildinfo
+.eslintcache
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

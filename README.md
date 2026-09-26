@@ -21,4 +21,4 @@ pnpm install
 pnpm dev
 ```
 
-Other scripts: `pnpm lint`, `pnpm build`, `pnpm preview`.
+Other scripts: `pnpm test` (Vitest), `pnpm lint`, `pnpm build`, `pnpm preview`.
