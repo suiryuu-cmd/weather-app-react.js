@@ -166,6 +166,11 @@
   animation: drift 45s ease-in-out infinite alternate;
 }
 
+/* "Pause Animation" in the footer freezes the texture in place. */
+.sky[data-still] .sky-fx::before {
+  animation-play-state: paused;
+}
+
 @keyframes fall {
   to { transform: translateY(var(--tile)); }
 }

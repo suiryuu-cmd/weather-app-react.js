@@ -1,7 +1,18 @@
 import { MagnifyingGlassIcon, NavigationArrowIcon, StarIcon } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Daily, Hourly } from './Forecast'
-import { getWeather, searchCities, temperature, windSpeed, type Place, type Unit, type Weather } from './weather'
+import {
+  clockFormat,
+  getWeather,
+  isWeather,
+  searchCities,
+  temperature,
+  wallClock,
+  windSpeed,
+  type Place,
+  type Unit,
+  type Weather,
+} from './weather'
 
 // ponytail: Open-Meteo has no reverse geocoding, so a geolocated place gets this
 // fixed name. Use a reverse-geocoding service if the city name matters.
@@ -41,19 +52,15 @@ function loadPlaces(key: string): Place[] {
 
 // The last weather shown, so a returning visitor sees a sky at once while it refreshes.
 function loadLast(): { place: Place; weather: Weather } | null {
-  const value = read('last') as { place?: unknown; weather?: Partial<Weather> } | null
-  const weather = value?.weather
-  return value && isPlace(value.place) && weather?.current && Array.isArray(weather.hours) && Array.isArray(weather.days)
-    ? { place: value.place, weather: weather as Weather }
-    : null
+  const value = read('last') as { place?: unknown; weather?: unknown } | null
+  return value && isPlace(value.place) && isWeather(value.weather) ? { place: value.place, weather: value.weather } : null
 }
 
-const samePlace = (a: Place, b: Place) =>
-  a.latitude.toFixed(2) === b.latitude.toFixed(2) && a.longitude.toFixed(2) === b.longitude.toFixed(2)
+const samePlace = (a: Place, b: Place) => a.latitude === b.latitude && a.longitude === b.longitude
 
-// Open-Meteo returns the place's local wall-clock time without an offset, so parsing it
-// as browser-local time and formatting it back keeps the place's clock reading.
-const timeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
+const timeFormat = clockFormat({ hour: 'numeric', minute: '2-digit' })
+
+const ANIMATED = ['rain-', 'storm-', 'snow-', 'fog-']
 
 const control =
   'border border-line bg-surface transition duration-150 hover:bg-surface-hover active:scale-[0.98] motion-reduce:active:scale-100'
@@ -69,9 +76,17 @@ export default function App() {
   const [recent, setRecent] = useState(() => loadPlaces('recent'))
   const [unit, setUnit] = useState<Unit>(() => (read('unit') === 'F' ? 'F' : 'C'))
   const [loading, setLoading] = useState(() => !initial && (recent.length > 0 || saved.length > 0))
+  const [still, setStill] = useState(() => read('still') === true)
+  // Screen-reader-only announcement: results found, or the weather that just loaded.
+  const [status, setStatus] = useState('')
   // Each request takes a number; a response that is no longer the latest is dropped.
   const latest = useRef(0)
   const skyRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  // Set when the control that started a request disappears on click (a search result,
+  // "Try Again"), so focus can land somewhere sensible instead of falling to <body>.
+  const refocus = useRef<'heading' | 'input' | null>(null)
 
   const now = weather?.current
   // Dawn and dusk only replace clear or cloudy skies; rain at sunset still looks like rain.
@@ -102,6 +117,18 @@ export default function App() {
     return () => clearTimeout(id)
   }, [sky])
 
+  // Runs after the new weather has rendered, so the heading exists to take focus.
+  useEffect(() => {
+    if (refocus.current === 'heading') headingRef.current?.focus()
+    refocus.current = null
+  }, [weather])
+
+  // Where focus goes when a request ends without new weather.
+  function recoverFocus() {
+    if (refocus.current) inputRef.current?.focus()
+    refocus.current = null
+  }
+
   function start(showLoading = true) {
     if (showLoading) setLoading(true)
     setNotice(null)
@@ -116,6 +143,8 @@ export default function App() {
       if (id !== latest.current) return
       setPlace(next)
       setWeather(data)
+      if (refocus.current) refocus.current = 'heading'
+      if (!quiet) setStatus(`${next.name}: ${temperature(data.current.temperature, unit)}°, ${data.current.label}`)
       write('last', { place: next, weather: data })
       if (next.name !== HERE) {
         const list = [next, ...recent.filter((p) => !samePlace(p, next))].slice(0, 5)
@@ -123,7 +152,10 @@ export default function App() {
         write('recent', list)
       }
     } catch (error) {
-      if (id === latest.current) setNotice({ text: (error as Error).message, retry: () => show(next) })
+      if (id === latest.current) {
+        setNotice({ text: (error as Error).message, retry: () => show(next) })
+        recoverFocus()
+      }
     } finally {
       if (id === latest.current) setLoading(false)
     }
@@ -136,8 +168,14 @@ export default function App() {
       if (id !== latest.current) return
       setResults(found)
       if (!found.length) setNotice({ text: `No places found for “${name}”. Check the spelling or try a larger city nearby.` })
+      else setStatus(`${found.length} ${found.length === 1 ? 'place' : 'places'} found`)
+      recoverFocus()
     } catch (error) {
-      if (id === latest.current) setNotice({ text: (error as Error).message, retry: () => find(name) })
+      if (id === latest.current) {
+        setResults([])
+        setNotice({ text: (error as Error).message, retry: () => find(name) })
+        recoverFocus()
+      }
     } finally {
       if (id === latest.current) setLoading(false)
     }
@@ -168,6 +206,7 @@ export default function App() {
       (error) => {
         if (id !== latest.current) return
         setLoading(false)
+        recoverFocus()
         setNotice(
           error.code === error.PERMISSION_DENIED
             ? { text: 'Location access is blocked. Allow it in your browser settings, or search for a city.' }
@@ -192,12 +231,24 @@ export default function App() {
     write('unit', next)
   }
 
+  function toggleStill() {
+    setStill(!still)
+    write('still', !still)
+  }
+
+  // Leaving a control that is about to unmount: remember to put focus back afterwards.
+  function fromVanishingControl(action: () => void) {
+    refocus.current = 'input'
+    action()
+  }
+
   const unsavedRecent = recent.filter((p) => !saved.some((s) => samePlace(s, p)))
+  const animated = ANIMATED.some((prefix) => sky.startsWith(prefix))
 
   return (
-    <div ref={skyRef} className="sky min-h-dvh" data-sky={sky}>
+    <div ref={skyRef} className="sky flex min-h-dvh flex-col" data-sky={sky} data-still={still || undefined}>
       <div aria-hidden className="sky-fx" />
-      <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-8 px-4 pt-6 pb-6 sm:px-8 sm:pt-8">
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 pt-6 sm:px-8 sm:pt-8">
         <header className="flex flex-col gap-3">
           <form role="search" onSubmit={onSearch} className="flex flex-col gap-2">
             <label htmlFor="city" className="text-sm font-medium">
@@ -211,6 +262,7 @@ export default function App() {
                   className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-ink-soft"
                 />
                 <input
+                  ref={inputRef}
                   id="city"
                   name="city"
                   type="search"
@@ -220,7 +272,7 @@ export default function App() {
                   autoComplete="off"
                   spellCheck={false}
                   enterKeyHint="search"
-                  className="h-12 w-full rounded-full border border-line bg-surface pr-4 pl-11 text-base placeholder:text-ink-soft"
+                  className="h-12 w-full rounded-full border border-ink/60 bg-surface pr-4 pl-11 text-base placeholder:text-ink-soft"
                 />
               </div>
               <button
@@ -256,11 +308,11 @@ export default function App() {
                 <li key={`${r.latitude},${r.longitude}`}>
                   <button
                     type="button"
-                    onClick={() => show(r)}
-                    className="flex w-full flex-col items-start px-5 py-3 text-left transition-colors duration-150 hover:bg-surface-hover"
+                    onClick={() => fromVanishingControl(() => show(r))}
+                    className="flex w-full flex-col items-start px-5 py-3 text-left break-words transition-colors duration-150 hover:bg-surface-hover"
                   >
-                    <span className="font-medium">{r.name}</span>
-                    <span className="text-sm text-ink-soft">{r.detail}</span>
+                    <span className="max-w-full font-medium">{r.name}</span>
+                    <span className="max-w-full text-sm text-ink-soft">{r.detail}</span>
                   </button>
                 </li>
               ))}
@@ -272,13 +324,20 @@ export default function App() {
               <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 {notice.text}
                 {notice.retry && (
-                  <button type="button" onClick={notice.retry} className="font-medium underline underline-offset-4">
+                  <button
+                    type="button"
+                    onClick={() => notice.retry && fromVanishingControl(notice.retry)}
+                    className="font-medium underline underline-offset-4"
+                  >
                     Try Again
                   </button>
                 )}
               </p>
             )}
           </div>
+          <p role="status" className="sr-only">
+            {status}
+          </p>
         </header>
 
         <section
@@ -290,7 +349,11 @@ export default function App() {
             <>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="min-w-0 text-2xl font-medium tracking-tight text-balance break-words sm:text-3xl">
+                  <h1
+                    ref={headingRef}
+                    tabIndex={-1}
+                    className="min-w-0 text-2xl font-medium tracking-tight text-balance break-words outline-none sm:text-3xl"
+                  >
                     {place.name}
                   </h1>
                   {place.name !== HERE && (
@@ -313,7 +376,7 @@ export default function App() {
                   {temperature(now.temperature, unit)}°
                 </p>
                 <p className="mt-3 text-2xl sm:text-3xl">{now.label}</p>
-                <p className="mt-1 text-sm text-ink-soft">Updated {timeFormat.format(new Date(now.time))} local time</p>
+                <p className="mt-1 text-sm text-ink-soft">Updated {timeFormat.format(wallClock(now.time))} local time</p>
               </div>
 
               <dl className="grid max-w-xl grid-cols-3 gap-4 border-t border-line pt-5">
@@ -350,13 +413,26 @@ export default function App() {
           </div>
         )}
 
-        <footer className="text-xs text-ink-soft">
+      </main>
+
+      <footer className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-x-4 gap-y-2 px-4 pt-8 pb-6 text-xs text-ink-soft sm:px-8">
+        <p>
           Weather data by{' '}
           <a href="https://open-meteo.com/" translate="no" className="underline underline-offset-2 hover:text-ink">
             Open-Meteo
           </a>
-        </footer>
-      </main>
+        </p>
+        {animated && (
+          <button
+            type="button"
+            onClick={toggleStill}
+            aria-pressed={still}
+            className="inline-flex min-h-6 items-center underline underline-offset-2 hover:text-ink"
+          >
+            Pause Animation
+          </button>
+        )}
+      </footer>
     </div>
   )
 }
@@ -390,12 +466,13 @@ function Places({
       <h2 className="text-sm font-medium text-ink-soft">{title}</h2>
       <ul className="flex flex-wrap gap-2">
         {places.map((p) => (
-          <li key={`${p.latitude},${p.longitude}`}>
+          <li key={`${p.latitude},${p.longitude}`} className="max-w-full">
             <button
               type="button"
               onClick={() => onPick(p)}
               aria-current={current !== null && samePlace(p, current)}
-              className={`${control} h-11 rounded-full px-4 text-sm font-medium aria-[current=true]:border-ink aria-[current=true]:bg-ink aria-[current=true]:text-[var(--sky-mid)]`}
+              title={p.name}
+              className={`${control} h-11 max-w-full truncate rounded-full px-4 text-sm font-medium aria-[current=true]:border-ink aria-[current=true]:bg-ink aria-[current=true]:text-[var(--sky-mid)]`}
             >
               {p.name}
             </button>

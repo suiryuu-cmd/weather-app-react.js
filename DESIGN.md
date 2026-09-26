@@ -239,7 +239,7 @@ Interactive controls (input, buttons, chips, icon buttons) are full pills. The r
 - **Place chip**: pill, 44px, same fill as Control. **Current** place inverts: ink fill, `--sky-mid` text.
 
 ### Inputs / Fields
-- **Search**: pill, 48px, surface fill + hairline, 20px Phosphor magnifier inset left in soft ink; placeholder in soft ink. Visible label above.
+- **Search**: pill, 48px, surface fill with a border in ink at 60% (the one boundary that must reach 3:1 on every sky, WCAG 1.4.11), 20px Phosphor magnifier inset left in soft ink; placeholder in soft ink. Visible label above.
 
 ### Cards / Containers
 - **Results panel**: rounded 1.5rem, surface + hairline, rows 12px x 20px, row hover to surface-hover.
@@ -253,6 +253,9 @@ The gradient lives on one fixed, viewport-sized layer (`.sky-fx`, behind the pag
 
 ### Forecast
 Below the fold: "Next 24 Hours" as a horizontal, snap-scrolling, keyboard-focusable strip (hour, Phosphor condition icon, temperature; the current hour sits on a surface pill), then "Next 7 Days" as rows of weekday, icon, condition in soft ink, and high and low. Icons are Phosphor regular, one per condition with day and night variants for clear and cloudy. A °C/°F segmented pill sits beside the location button; the pressed option fills with ink.
+
+### Footer
+Outside `main` so it is the page's contentinfo landmark: Open-Meteo attribution, and a "Pause Animation" toggle (aria-pressed, remembered) whenever the sky has moving texture (rain, storm, snow, fog).
 
 ## Do's and Don'ts
 

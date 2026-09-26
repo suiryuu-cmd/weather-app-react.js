@@ -9,7 +9,7 @@ import {
   SunIcon,
   type Icon,
 } from '@phosphor-icons/react'
-import { temperature, type Day, type Hour, type Kind, type Unit } from './weather'
+import { clockFormat, temperature, wallClock, type Day, type Hour, type Kind, type Unit } from './weather'
 
 const ICONS: Record<Kind, [day: Icon, night: Icon]> = {
   clear: [SunIcon, MoonIcon],
@@ -20,8 +20,8 @@ const ICONS: Record<Kind, [day: Icon, night: Icon]> = {
   storm: [CloudLightningIcon, CloudLightningIcon],
 }
 
-const hourFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric' })
-const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short' })
+const hourFormat = clockFormat({ hour: 'numeric' })
+const dayFormat = clockFormat({ weekday: 'short' })
 
 function KindIcon({ kind, isDay = true }: { kind: Kind; isDay?: boolean }) {
   const Glyph = ICONS[kind][isDay ? 0 : 1]
@@ -46,7 +46,7 @@ export function Hourly({ hours, unit }: { hours: Hour[]; unit: Unit }) {
             key={hour.time}
             className="flex w-16 shrink-0 snap-start flex-col items-center gap-2 rounded-3xl py-3 first:bg-surface"
           >
-            <span className="text-sm text-ink-soft">{i === 0 ? 'Now' : hourFormat.format(new Date(hour.time))}</span>
+            <span className="text-sm text-ink-soft">{i === 0 ? 'Now' : hourFormat.format(wallClock(hour.time))}</span>
             <KindIcon kind={hour.kind} isDay={hour.isDay} />
             <span className="sr-only">{hour.label}</span>
             <span className="text-lg tabular-nums">{temperature(hour.temperature, unit)}°</span>
@@ -66,10 +66,9 @@ export function Daily({ days, unit }: { days: Day[]; unit: Unit }) {
       <ol className="flex flex-col">
         {days.map((day, i) => (
           <li key={day.date} className="grid grid-cols-[4rem_1.5rem_1fr_auto] items-center gap-3 py-2.5">
-            {/* The date has no time part, so read it at noon to stay on the same calendar day. */}
-            <span className="font-medium">{i === 0 ? 'Today' : dayFormat.format(new Date(`${day.date}T12:00`))}</span>
+            <span className="font-medium">{i === 0 ? 'Today' : dayFormat.format(wallClock(day.date))}</span>
             <KindIcon kind={day.kind} />
-            <span className="truncate text-ink-soft">{day.label}</span>
+            <span className="min-w-0 break-words text-ink-soft">{day.label}</span>
             <span className="text-right tabular-nums">
               {temperature(day.max, unit)}°{' '}
               <span className="ml-2 text-ink-soft">{temperature(day.min, unit)}°</span>

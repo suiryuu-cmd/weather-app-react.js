@@ -32,6 +32,13 @@ export const temperature = (celsius: number, unit: Unit) => Math.round(unit === 
 
 export const windSpeed = (kmh: number, unit: Unit) => Math.round(unit === 'F' ? kmh * 0.621371 : kmh)
 
+// Open-Meteo times are the place's own wall clock without an offset ("2026-09-26T21:15").
+// Reading them as UTC and formatting them in UTC shows that clock exactly, untouched by
+// the viewer's own timezone or daylight-saving changes.
+export const wallClock = (time: string) => new Date(`${time.length === 10 ? `${time}T12:00` : time}Z`)
+export const clockFormat = (options: Intl.DateTimeFormatOptions) =>
+  new Intl.DateTimeFormat(undefined, { ...options, timeZone: 'UTC' })
+
 // WMO weather interpretation codes, https://open-meteo.com/en/docs
 const WMO: Record<number, [string, Kind]> = {
   0: ['Clear sky', 'clear'],
@@ -66,6 +73,31 @@ const WMO: Record<number, [string, Kind]> = {
 
 const describe = (code: number) => WMO[code] ?? ['Unknown', 'cloudy']
 
+// Cached weather comes back from localStorage, which anyone can edit, and older app
+// versions may have stored a different shape. Check every field the UI reads.
+const KINDS = new Set<unknown>(Object.values(WMO).map(([, kind]) => kind))
+const isNum = (v: unknown) => typeof v === 'number' && Number.isFinite(v)
+const isTime = (v: unknown) => typeof v === 'string' && !Number.isNaN(wallClock(v).getTime())
+const isText = (v: unknown) => typeof v === 'string'
+
+export function isWeather(value: unknown): value is Weather {
+  const w = value as Weather | null
+  const c = w?.current
+  return (
+    !!c &&
+    isTime(c.time) &&
+    [c.temperature, c.feelsLike, c.humidity, c.wind].every(isNum) &&
+    isText(c.label) &&
+    KINDS.has(c.kind) &&
+    typeof c.isDay === 'boolean' &&
+    [null, 'dawn', 'dusk'].includes(c.twilight) &&
+    Array.isArray(w.hours) &&
+    w.hours.every((h) => isTime(h?.time) && isNum(h.temperature) && isText(h.label) && KINDS.has(h.kind) && typeof h.isDay === 'boolean') &&
+    Array.isArray(w.days) &&
+    w.days.every((d) => isTime(d?.date) && isNum(d.min) && isNum(d.max) && isText(d.label) && KINDS.has(d.kind))
+  )
+}
+
 async function getJson(url: string) {
   const res = await fetch(url).catch(() => {
     throw new Error("Couldn't reach the weather service. Check your connection and try again.")
@@ -87,9 +119,7 @@ export async function searchCities(name: string): Promise<Place[]> {
   )
 }
 
-// Open-Meteo times are the place's local wall clock without an offset ("2026-09-26T21:00").
-// Parsing them all the same way keeps differences between them correct.
-const minutesBetween = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) / 60000
+const minutesBetween = (a: string, b: string) => Math.abs(wallClock(a).getTime() - wallClock(b).getTime()) / 60000
 
 export async function getWeather({ latitude, longitude }: Place): Promise<Weather> {
   const params = new URLSearchParams({
@@ -104,8 +134,15 @@ export async function getWeather({ latitude, longitude }: Place): Promise<Weathe
   const { current: c, hourly: h, daily: d } = await getJson(`https://api.open-meteo.com/v1/forecast?${params}`)
 
   const [label, kind] = describe(c.weather_code)
-  const twilight =
-    minutesBetween(c.time, d.sunrise[0]) <= 40 ? 'dawn' : minutesBetween(c.time, d.sunset[0]) <= 40 ? 'dusk' : null
+  // Near the poles the sun may not rise or set: Open-Meteo then returns midnight
+  // placeholders (equal times in polar night, sunset on the next day in polar day).
+  const sunrise: string | undefined = d.sunrise?.[0]
+  const sunset: string | undefined = d.sunset?.[0]
+  let twilight: Current['twilight'] = null
+  if (sunrise && sunset && sunrise < sunset && sunrise.slice(0, 10) === sunset.slice(0, 10)) {
+    if (minutesBetween(c.time, sunrise) <= 40) twilight = 'dawn'
+    else if (minutesBetween(c.time, sunset) <= 40) twilight = 'dusk'
+  }
 
   // Next 24 hours, starting with the current hour.
   const first = Math.max(0, (h.time as string[]).findIndex((t) => t >= c.time.slice(0, 13)))
@@ -113,6 +150,8 @@ export async function getWeather({ latitude, longitude }: Place): Promise<Weathe
     const [hourLabel, hourKind] = describe(h.weather_code[first + i])
     return { time, temperature: h.temperature_2m[first + i], label: hourLabel, kind: hourKind, isDay: h.is_day[first + i] === 1 }
   })
+  // The first tile reads "Now", so it shows the same reading as the big number above it.
+  if (hours[0]) Object.assign(hours[0], { temperature: c.temperature_2m, label, kind, isDay: c.is_day === 1 })
 
   const days = (d.time as string[]).map((date, i) => {
     const [dayLabel, dayKind] = describe(d.weather_code[i])
