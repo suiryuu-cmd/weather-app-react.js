@@ -47,6 +47,11 @@ export function Hourly({ hours, unit }: { hours: Hour[]; unit: Unit }) {
 }
 
 export function Daily({ days, unit }: { days: Day[]; unit: Unit }) {
+  // One scale for the whole week, so each bar sits where its day falls among the others.
+  const low = Math.min(...days.map((d) => d.min))
+  const span = Math.max(...days.map((d) => d.max)) - low || 1
+  const at = (celsius: number) => ((celsius - low) / span) * 100
+
   return (
     <section aria-labelledby="daily" className="flex flex-col gap-3">
       <h2 id="daily" className="text-sm font-medium text-ink-soft">
@@ -54,13 +59,23 @@ export function Daily({ days, unit }: { days: Day[]; unit: Unit }) {
       </h2>
       <ol className="flex flex-col">
         {days.map((day, i) => (
-          <li key={day.date} className="grid grid-cols-[4rem_1.5rem_1fr_auto] items-center gap-3 py-2.5">
+          <li key={day.date} className="relative grid grid-cols-[3.5rem_1.5rem_2.5rem_1fr_2.5rem] items-center gap-3 py-2.5">
             <span className="font-medium">{i === 0 ? 'Today' : dayFormat.format(wallClock(day.date))}</span>
             <KindIcon kind={day.kind} />
-            <span className="min-w-0 break-words text-ink-soft">{day.label}</span>
+            <span className="sr-only">{day.label}</span>
+            <span className="text-right text-ink-soft tabular-nums">
+              <span className="sr-only">Low </span>
+              {temperature(day.min, unit)}°
+            </span>
+            <span aria-hidden className="relative h-1 rounded-full bg-line">
+              <span
+                className="absolute inset-y-0 min-w-1 rounded-full bg-ink"
+                style={{ left: `${at(day.min)}%`, right: `${100 - at(day.max)}%` }}
+              />
+            </span>
             <span className="text-right tabular-nums">
-              {temperature(day.max, unit)}°{' '}
-              <span className="ml-2 text-ink-soft">{temperature(day.min, unit)}°</span>
+              <span className="sr-only">High </span>
+              {temperature(day.max, unit)}°
             </span>
           </li>
         ))}

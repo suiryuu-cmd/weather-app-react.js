@@ -214,7 +214,9 @@ Colors are sky first, ink second; there is no brand accent.
 
 ## Layout
 
-A single centered column (max 48rem) filling the dynamic viewport height. Padding 16px, 32px from 640px. Vertical order is fixed: search row, results/notice, current weather (vertically centered in remaining space), places, footer. Column gap 32px; control gaps 8px; readings are a three-column grid (max 36rem) under a hairline. Left-aligned throughout.
+A single centered column (max 48rem) filling the dynamic viewport height. Padding 16px, 32px from 640px. Vertical order is fixed: search row, results/notice, current weather (vertically centered in remaining space), places, forecast, footer. Column gap 32px; control gaps 8px; readings are a three-column grid (max 36rem) under a hairline. Left-aligned throughout.
+
+From 1024px, once a forecast exists, the page widens to 72rem and splits in two: search, current weather and places on the left (flexible), the forecast in a 25rem column on the right, vertically centered against the left side. The column gap is 64px. At 1280x800 everything, including all seven days, fits above the fold. Idle and loading stay single-column.
 
 ## Elevation & Depth
 
@@ -237,6 +239,7 @@ Interactive controls (input, buttons, chips, icon buttons) are full pills. The r
 
 ### Chips
 - **Place chip**: pill, 44px, same fill as Control. **Current** place inverts: ink fill, `--sky-mid` text.
+- **Suggested cities** (idle only): the same chips under "Try a City", below the idle headline. Four fixed places spread across time zones (Tokyo, Reykjavík, Cairo, New York) so a first-time visitor sees at least one day sky and one night sky within two clicks.
 
 ### Inputs / Fields
 - **Search**: pill, 48px, surface fill with a border in ink at 60% (the one boundary that must reach 3:1 on every sky, WCAG 1.4.11), 20px Phosphor magnifier inset left in soft ink; placeholder in soft ink. Visible label above.
@@ -252,7 +255,9 @@ Sky stops are registered `@property` colors and glide over 1.2s `cubic-bezier(0.
 The gradient lives on one fixed, viewport-sized layer (`.sky-fx`, behind the page) so the sky always reads like looking up while the forecast scrolls over it. A radial glow (`--sky-glow`) sits on the horizon for clear day, dawn, dusk and clear night. One pseudo-element carries the texture: tiled stars that fade toward the horizon on clear nights, falling rain streaks (faster for storms), drifting snowflakes in the current ink, and two slow haze bands for fog. Textures move by `transform` only and stop under reduced motion. Dawn and dusk replace clear or cloudy skies within 40 minutes of sunrise or sunset; other conditions keep their own sky.
 
 ### Forecast
-Below the fold: "Next 24 Hours" as a horizontal, snap-scrolling, keyboard-focusable strip (hour, Phosphor condition icon, temperature; the current hour sits on a surface pill), then "Next 7 Days" as rows of weekday, icon, condition in soft ink, and high and low. Icons are Phosphor regular, one per condition with day and night variants for clear and cloudy. A °C/°F segmented pill sits beside the location button; the pressed option fills with ink.
+Below the fold: "Next 24 Hours" as a horizontal, snap-scrolling, keyboard-focusable strip (hour, Phosphor condition icon, temperature; the current hour sits on a surface pill), then "Next 7 Days" as rows of weekday, icon, low (soft ink), range bar, and high. The condition name is screen-reader text, as in the hourly strip. Icons are Phosphor regular, one per condition with day and night variants for clear and cloudy. A °C/°F segmented pill sits beside the location button; the pressed option fills with ink.
+
+**Range bar.** One scale for the whole week (the week's lowest low to its highest high), so you compare days against each other. Track: 4px pill in `line`. Fill: `ink`, rounded ends, at least 4px wide when low equals high. The numbers on either side carry the values, so the bar needs no tooltip or axis.
 
 ### Footer
 Outside `main` so it is the page's contentinfo landmark: Open-Meteo attribution, and a "Pause Animation" toggle (aria-pressed, remembered) whenever the sky has moving texture (rain, storm, snow, fog).
@@ -270,3 +275,16 @@ Outside `main` so it is the page's contentinfo landmark: Open-Meteo attribution,
 - **Don't** add condition icons or illustrations; the sky carries the condition.
 - **Don't** fade ink between families or pair a sky with ink that fails AA.
 - **Don't** make a dark-scheme day sky darker or cooler than its night twin.
+- **Don't** add a colored temperature gradient to the range bar; ink only, the sky already carries the color.
+
+## Checklist for a UI change
+
+Run through this before you commit anything visual:
+
+1. Screenshot it at 390px, 1024px and 1280px wide, on at least one pale sky (clear-day) and one dark sky (rain-day or a night sky), in both light and dark system themes.
+2. New color? It comes from `data-sky` variables. New surface? It is `surface` + `line`, never stacked.
+3. Text on the sky passes WCAG AA; graphics that carry meaning (bars, borders of inputs) reach 3:1.
+4. Motion moves `transform` or `opacity` only, stays under 300ms for UI feedback, and stops under `prefers-reduced-motion`.
+5. Weather numbers use `tabular-nums`; sizes above 3rem use weight 200.
+6. Keyboard: every new control is reachable with Tab, shows the 2px ink focus ring, and keeps focus off `<body>` when it disappears.
+7. `pnpm lint`, `pnpm test` and `pnpm build` pass.

@@ -16,12 +16,19 @@ dist-ssr
 coverage/
 *.tsbuildinfo
 .eslintcache
+playwright-report/
+test-results/
+
+# Deploy tool state (Vercel, Netlify): holds project IDs and can hold tokens
+.vercel
+.netlify
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
@@ -36,3 +43,4 @@ coverage/
 .env
 .env.*
 !.env.example
+*.pem

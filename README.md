@@ -6,9 +6,10 @@ Built with React, TypeScript, Vite, and Tailwind CSS. Weather and city search co
 
 ## Features
 
-- Search for a city, or use your current location
+- Search for a city, use your current location, or pick a suggested city on the first visit
 - Temperature, feels like, humidity, and wind right now
-- The next 24 hours and the next 7 days
+- The next 24 hours and the next 7 days, with a weekly temperature range bar per day
+- Two columns on wide screens: current weather on the left, forecast on the right
 - °C or °F, remembered in your browser
 - Saved and recent places, kept in your browser; your last place opens instantly
 - Skies for dawn and dusk, stars on clear nights, falling rain and snow, drifting fog
@@ -22,4 +23,3 @@ pnpm dev
 ```
 
 Other scripts: `pnpm test` (Vitest), `pnpm lint`, `pnpm build`, `pnpm preview`.
-# weather-app-react.js
