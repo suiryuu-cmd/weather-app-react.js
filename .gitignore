@@ -8,20 +8,27 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+.pnpm-store/
 dist
 dist-ssr
 *.local
+*.tgz
 
 # Test and tooling output
 coverage/
 *.tsbuildinfo
 .eslintcache
+.vite/
 playwright-report/
 test-results/
 
 # Deploy tool state (Vercel, Netlify): holds project IDs and can hold tokens
 .vercel
 .netlify
+
+# Running the GitHub Actions workflow locally with act: .secrets holds real tokens
+.secrets
+.actrc
 
 # Editor directories and files
 .vscode/*
