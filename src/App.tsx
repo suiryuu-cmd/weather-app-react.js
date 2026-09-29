@@ -18,6 +18,16 @@ import {
 // fixed name. Use a reverse-geocoding service if the city name matters.
 const HERE = 'My location'
 
+// First-visit suggestions, spread across time zones so at least one is usually in daylight
+// and one at night. Coordinates are GeoNames', which Open-Meteo's geocoding returns, so a
+// later search for the same city should not add a duplicate to Recent.
+const SUGGESTED: Place[] = [
+  { name: 'Tokyo', detail: 'Tokyo, Japan', latitude: 35.6895, longitude: 139.69171 },
+  { name: 'Reykjavík', detail: 'Capital Region, Iceland', latitude: 64.13548, longitude: -21.89541 },
+  { name: 'Cairo', detail: 'Cairo, Egypt', latitude: 30.06263, longitude: 31.24967 },
+  { name: 'New York', detail: 'New York, United States', latitude: 40.71427, longitude: -74.00597 },
+]
+
 type Notice = { text: string; retry?: () => void }
 
 // localStorage is user-editable, so everything read back is checked before use.
@@ -236,8 +246,12 @@ export default function App() {
   return (
     <div ref={skyRef} className="sky flex min-h-dvh flex-col" data-sky={sky} data-still={still || undefined}>
       <div aria-hidden className="sky-fx" />
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 pt-6 sm:px-8 sm:pt-8">
-        <header className="flex flex-col gap-3">
+      {/* Wide screens split in two once there is a forecast: the answer on the left, the
+          forecast beside it, so both fit above the fold. */}
+      <main
+        className={`mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 pt-6 sm:px-8 sm:pt-8 lg:max-w-6xl ${weather ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] lg:grid-rows-[auto_1fr_auto] lg:gap-x-16' : ''}`}
+      >
+        <header className="flex flex-col gap-3 lg:col-start-1 lg:row-start-1">
           <form role="search" onSubmit={onSearch} className="flex flex-col gap-2">
             <label htmlFor="city" className="text-sm font-medium">
               Search for a city
@@ -330,7 +344,7 @@ export default function App() {
         <section
           aria-label="Current weather"
           aria-busy={loading}
-          className={`flex flex-1 flex-col justify-center gap-8 transition-opacity duration-300 ${loading && now ? 'opacity-60' : ''}`}
+          className={`flex flex-1 flex-col justify-center gap-8 transition-opacity duration-300 lg:col-start-1 lg:row-start-2 ${loading && now ? 'opacity-60' : ''}`}
         >
           {place && now ? (
             <>
@@ -380,21 +394,24 @@ export default function App() {
               <div className="h-7 w-36 rounded-full bg-surface" />
             </div>
           ) : (
-            <h1 className="text-5xl leading-[1.05] font-extralight tracking-[-0.03em] text-balance sm:text-7xl">
-              Check the Sky Anywhere
-            </h1>
+            <div className="flex flex-col gap-8">
+              <h1 className="text-5xl leading-[1.05] font-extralight tracking-[-0.03em] text-balance sm:text-7xl">
+                Check the Sky Anywhere
+              </h1>
+              <Places title="Try a City" places={SUGGESTED} current={null} onPick={(p) => fromVanishingControl(() => show(p))} />
+            </div>
           )}
         </section>
 
         {(saved.length > 0 || unsavedRecent.length > 0) && (
-          <nav aria-label="Places" className="flex flex-col gap-5">
+          <nav aria-label="Places" className="flex flex-col gap-5 lg:col-start-1 lg:row-start-3">
             <Places title="Saved" places={saved} current={place} onPick={show} />
             <Places title="Recent" places={unsavedRecent} current={place} onPick={show} />
           </nav>
         )}
 
         {weather && (
-          <div className="flex flex-col gap-10 pt-4">
+          <div className="flex flex-col gap-10 pt-4 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-center lg:pt-0">
             <Hourly hours={weather.hours} unit={unit} />
             <Daily days={weather.days} unit={unit} />
           </div>
@@ -402,7 +419,7 @@ export default function App() {
 
       </main>
 
-      <footer className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-x-4 gap-y-2 px-4 pt-8 pb-6 text-xs text-ink-soft sm:px-8">
+      <footer className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-x-4 gap-y-2 px-4 pt-8 pb-6 text-xs text-ink-soft sm:px-8 lg:max-w-6xl">
         <p>
           Weather data by{' '}
           <a href="https://open-meteo.com/" translate="no" className="underline underline-offset-2 hover:text-ink">

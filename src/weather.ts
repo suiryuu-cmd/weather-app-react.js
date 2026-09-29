@@ -99,7 +99,8 @@ export function isWeather(value: unknown): value is Weather {
 }
 
 async function getJson(url: string) {
-  const res = await fetch(url).catch(() => {
+  // Without a timeout a stalled connection would leave the app loading forever.
+  const res = await fetch(url, { signal: AbortSignal.timeout(10000) }).catch(() => {
     throw new Error("Couldn't reach the weather service. Check your connection and try again.")
   })
   if (!res.ok) throw new Error(`Weather service returned ${res.status}. Try again in a moment.`)
