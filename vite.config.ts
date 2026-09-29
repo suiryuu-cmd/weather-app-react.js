@@ -21,17 +21,23 @@ const contentSecurityPolicy: Plugin = {
 
 // The Latin font is otherwise found only after the CSS has downloaded and parsed.
 // Its file name carries a build hash, so the link is added once the bundle exists.
+let base = '/'
 const preloadFont: Plugin = {
   name: 'preload-latin-font',
   apply: 'build',
+  configResolved: (config) => {
+    base = config.base
+  },
   transformIndexHtml(_, { bundle }) {
     const font = Object.keys(bundle ?? {}).find((file) => /geist-latin-wght-normal-.*\.woff2$/.test(file))
     if (!font) return []
-    return [{ tag: 'link', attrs: { rel: 'preload', as: 'font', type: 'font/woff2', href: `/${font}`, crossorigin: '' }, injectTo: 'head' }]
+    return [{ tag: 'link', attrs: { rel: 'preload', as: 'font', type: 'font/woff2', href: `${base}${font}`, crossorigin: '' }, injectTo: 'head' }]
   },
 }
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Served from https://suiryuu-cmd.github.io/weather-app-react.js/ (GitHub Pages project site).
+  base: '/weather-app-react.js/',
   plugins: [react(), tailwindcss(), contentSecurityPolicy, preloadFont],
 })

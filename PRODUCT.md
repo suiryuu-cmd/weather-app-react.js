@@ -20,7 +20,7 @@ Suasana tampilan ikut cuaca: kondisi (cerah, berawan, kabut, hujan, salju, badai
 - Fitur: cari kota, cuaca sekarang (suhu, terasa seperti, kelembapan, angin, kondisi), lokasi saya via geolocation, favorit dan terakhir dicari di localStorage, prakiraan 24 jam dan 7 hari, toggle °C/°F, cuaca terakhir di-cache supaya langsung tampil saat dibuka.
 - Satuan metrik (°C, km/h) atau imperial (°F, mph) sesuai pilihan pengguna. UI bahasa Inggris.
 - Open-Meteo tidak punya reverse geocoding, jadi lokasi dari geolocation diberi label "My location".
-- Deploy belum ditentukan; git hanya lokal untuk sekarang.
+- Deploy: GitHub Pages lewat GitHub Actions, di https://suiryuu-cmd.github.io/weather-app-react.js/.
 
 ## Evidence on Hand
 Tidak ada aset brand, logo, atau konten selain data cuaca live. Jangan mengarang testimoni atau klaim.

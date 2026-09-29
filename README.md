@@ -2,6 +2,8 @@
 
 Current weather for any city, where the whole screen becomes the sky over that place: its condition (clear, cloudy, fog, rain, snow, storm) and whether it is day or night there.
 
+Live: https://suiryuu-cmd.github.io/weather-app-react.js/
+
 Built with React, TypeScript, Vite, and Tailwind CSS. Weather and city search come from [Open-Meteo](https://open-meteo.com/), which needs no API key.
 
 ## Features
@@ -22,4 +24,10 @@ pnpm install
 pnpm dev
 ```
 
+The dev server opens at `http://localhost:5173/weather-app-react.js/`, the same path as the live site.
+
 Other scripts: `pnpm test` (Vitest), `pnpm lint`, `pnpm build`, `pnpm preview`.
+
+## Deploy
+
+Every push to `main` runs `.github/workflows/deploy.yml`: lint, test, build, then publish `dist/` to GitHub Pages. The site path is set by `base` in `vite.config.ts`; change it there if the repository is renamed.

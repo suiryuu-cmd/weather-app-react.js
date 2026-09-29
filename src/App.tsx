@@ -30,10 +30,14 @@ const SUGGESTED: Place[] = [
 
 type Notice = { text: string; retry?: () => void }
 
+// GitHub Pages serves every project of an account from one origin, so they all share one
+// localStorage. The prefix keeps this app's keys apart from theirs.
+const STORE = 'weather:'
+
 // localStorage is user-editable, so everything read back is checked before use.
 function read(key: string): unknown {
   try {
-    return JSON.parse(localStorage.getItem(key) ?? 'null')
+    return JSON.parse(localStorage.getItem(STORE + key) ?? 'null')
   } catch {
     return null
   }
@@ -41,7 +45,7 @@ function read(key: string): unknown {
 
 function write(key: string, value: unknown) {
   try {
-    localStorage.setItem(key, JSON.stringify(value))
+    localStorage.setItem(STORE + key, JSON.stringify(value))
   } catch {
     // Storage blocked (private mode, quota): the app still works, it just forgets.
   }
